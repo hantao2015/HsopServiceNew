@@ -21,9 +21,13 @@
         private static Thread m_thdAutosendSms = null;
         private static Thread m_thdDictSave = null;
         private static Thread m_thdAutosendSmsWs = null;
+        private static Process m_process = null;
+         
         public static XmlDocument m_servicexlm = new XmlDocument();
+        
         public static string m_servicename = "Shinemay";
-       
+        string path = AppDomain.CurrentDomain.BaseDirectory;
+
         [DebuggerNonUserCode]
         public ShinemayService()
         {
@@ -108,6 +112,10 @@
                 m_thdAutoRun.Start();
                 m_thdAutosendSmsWs = new Thread(new ThreadStart(AutoSendSmsWsLogic.Run));
                 m_thdAutosendSmsWs.Start();
+                path = CmsConfig.GetFolderOfProjectRoot + "collector\\";
+                Exception ex = null;
+                SLog.Crucial("Hsop StartProgram: " + path + @"RealsunMiniServerDac.exe",ref ex);
+                StartProgram(path + @"RealsunMiniServerDac.exe");
             }
             catch (Exception exception1)
             {
@@ -116,6 +124,62 @@
                 m_evtLog.WriteEntry("AutoImport unknown exception in OnStart(). Message: " + ex.Message);
                 ProjectData.ClearProjectError();
             }
+        }
+        /// <summary>
+        /// 启动所有要启动的程序 ProgramPath：完整路径
+        /// </summary>
+        private void StartProgram(string ProgramPath)
+        {
+            try
+            {
+
+              
+                    string fileName = System.IO.Path.GetFileNameWithoutExtension(ProgramPath);
+                    if (!IsExistProcess(fileName))
+                    {
+                        ProcessStartInfo startInfo = new ProcessStartInfo(ProgramPath);
+                        startInfo.WorkingDirectory = path;
+                        startInfo.WindowStyle = ProcessWindowStyle.Normal;
+                        m_process = Process.Start(startInfo);
+                        LogWrite("Winform: " + fileName + " started.");
+                        LogWrite("startInfo.WorkingDirectory: " + startInfo.WorkingDirectory);
+                    }
+ 
+
+            }
+            catch (Exception err)
+            {
+                LogWrite(err.Message);
+            }
+        }
+        /// <summary>
+        /// 写日志
+        /// </summary>
+        public void LogWrite(string str)
+        {
+            using (System.IO.StreamWriter sw = new System.IO.StreamWriter(path + @"DemoLog.txt", true))
+            {
+                sw.WriteLine(DateTime.Now.ToString("[yyyy-MM-dd HH:mm:ss] ") + str);
+            }
+        }
+
+
+        /// <summary>
+        /// 检查该进程是否已启动
+        /// </summary>
+        /// <param name="processName"></param>
+        /// <returns></returns>
+        private bool IsExistProcess(string processName)
+        {
+            Process[] MyProcesses = Process.GetProcesses();
+            foreach (Process MyProcess in MyProcesses)
+            {
+                if (MyProcess.ProcessName.CompareTo(processName) == 0)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         protected override void OnStop()
@@ -128,11 +192,14 @@
                 m_thdAutosendEmail.Abort();
                 m_thdAutosendSms.Abort();
                 m_thdAutoRun.Abort();
+                m_process.Close();
                 VBt_refS0 = null;
                 SLog.Crucial(m_servicename + " stopped.", ref VBt_refS0, false);
+                SLog.Crucial(m_process.ProcessName + " Closed.", ref VBt_refS0, false);
                 if (m_evtLog != null)
                 {
                     m_evtLog.WriteEntry(m_servicename+" stopped.");
+                    m_evtLog.WriteEntry(m_process.ProcessName + " Closed.");
                 }
             }
             catch (Exception exception1)

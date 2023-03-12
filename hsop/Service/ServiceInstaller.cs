@@ -85,6 +85,8 @@
                 this._ServiceProcessInstaller1 = value;
             }
         }
+        //为当前Windows服务设置可与桌面交互选项，否则winform程序没有显示界面
+      
     }
 }
 
